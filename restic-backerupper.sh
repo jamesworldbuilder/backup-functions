@@ -4,6 +4,27 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
 source "$SCRIPT_DIR/backerupper-config.env"
 
+# Evaluates if Rclone password variable is empty
+if [ -z "$RCLONE_CONFIG_PASS" ]; then
+    echo -e "\n> Secure Rclone configuration detected"
+    
+    # Prompts user for password without echoing input to terminal
+    read -s -r -p "Enter Rclone config password: " user_rclone_pass
+    echo ""
+    
+    # Validates password input is not empty
+    if [ -z "$user_rclone_pass" ]; then
+        echo "ERROR: Password input cannot be blank"
+        exit 1
+    fi
+    
+    # Exports user input as global environment variable
+    export RCLONE_CONFIG_PASS="$user_rclone_pass"
+else
+    # Exports existing variable
+    export RCLONE_CONFIG_PASS
+fi
+
 # Defines dynamic paths
 SRC_DIR="$(dirname "$(dirname "$SCRIPT_DIR")")"
 IGNORE_FILE="$SRC_DIR/$IGNORE_FILE_NAME"
@@ -33,6 +54,7 @@ sync_aws_keys() {
             "$AWS_CMD" configure set default.region "$AWS_DEFAULT_REGION"
         else
             echo "AWS credentials not found"
+            
             # Loops credential options until valid input is received
             while true; do
                 read -r -p "Update AWS global variables in config (u) or run interactive configuration (c) [v/c] (CTRL+C to cancel)? " user_choice
@@ -77,6 +99,7 @@ sync_aws_keys() {
         
         # Evaluates local file conflicts
         if [ -f "$RESTIC_PASSWORD_FILE" ]; then
+            
             # Loops conflict resolution prompt until valid input is received
             while true; do
                 echo -e "**Local Restic key exists: $RESTIC_PASSWORD_FILE"
